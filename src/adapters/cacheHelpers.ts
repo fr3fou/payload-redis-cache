@@ -1,5 +1,4 @@
 import { crypto } from './crypto'
-import { logger } from './logger'
 import { redisContext } from './redis'
 
 interface cacheBaseArgs {
@@ -29,6 +28,7 @@ export const getCacheItem = async ({
   authorization
 }: cacheBaseArgs): Promise<string | null> => {
   const redisClient = redisContext.getRedisClient()
+  const logger = redisContext.getLogger()
   if (!redisClient) {
     logger.info(`Unable to get cache for ${requestedUrl}`)
     return null
@@ -51,6 +51,7 @@ export const setCacheItem = ({
   body
 }: cacheExtendedArgs): void => {
   const redisClient = redisContext.getRedisClient()
+  const logger = redisContext.getLogger()
   if (!redisClient) {
     logger.info(`Unable to set cache for ${requestedUrl}`)
     return
@@ -72,6 +73,7 @@ export const setCacheItem = ({
 
 export const invalidateCache = async (): Promise<void> => {
   const redisClient = redisContext.getRedisClient()
+  const logger = redisContext.getLogger()
   if (!redisClient) {
     logger.info('Unable to invalidate cache')
     return

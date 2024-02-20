@@ -1,5 +1,6 @@
 import { createClient, RedisClientType } from 'redis'
-import { logger } from './logger'
+import { logger, logger as pinoLogger } from './logger'
+import payload from 'payload'
 
 export interface IRedisContext {
   getRedisClient: () => RedisClientType
@@ -15,23 +16,25 @@ export class RedisContext implements IRedisContext {
   private redisClient: RedisClientType | null = null
   private namespace: string | null = null
   private indexesName: string | null = null
+  private logger: typeof payload.logger
 
   public init(params: InitRedisContextParams) {
     const { url, namespace, indexesName } = params
 
+    this.logger =
+      payload.logger?.child({ component: 'redis-cache' }) ?? (pinoLogger as typeof payload.logger)
     this.namespace = namespace
     this.indexesName = indexesName
     try {
       this.redisClient = createClient({ url })
-      this.redisClient.connect()
-      logger.info('Connected to Redis successfully!')
+      this.redisClient.connect().then(() => this.logger.info('Connected to Redis successfully!'))
 
       this.redisClient.on('error', (error) => {
-        logger.error(error)
+        this.logger.error(error)
       })
     } catch (e) {
       this.redisClient = null
-      logger.info('Unable to connect to Redis!')
+      this.logger.error('Unable to connect to Redis!', e)
     }
   }
 
@@ -44,6 +47,9 @@ export class RedisContext implements IRedisContext {
   }
   public getIndexesName(): string {
     return this.indexesName
+  }
+  public getLogger(): typeof payload.logger {
+    return this.logger
   }
 }
 
