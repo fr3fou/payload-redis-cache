@@ -28,13 +28,16 @@ export const cacheMiddleware =
     }
 
     let userCollection: string = DEFAULT_USER_COLLECTION
+    const token = cookie
+      ? extractToken(cookie)
+      : authorization
+      ? authorization.replace('Bearer ', '')
+      : ''
+
     // check if there is a cookie and extract data
-    if (cookie) {
-      const token = extractToken(cookie)
-      if (token) {
-        const tokenData = getTokenPayload(token)
-        userCollection = tokenData.collection
-      }
+    if (token) {
+      const tokenData = getTokenPayload(token)
+      userCollection = tokenData.collection
     }
 
     // TODO find a better way
