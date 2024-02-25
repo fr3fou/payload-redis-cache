@@ -1,18 +1,14 @@
 import type { Config, Plugin } from 'payload/config'
 import { CollectionConfig, GlobalConfig } from 'payload/types'
-import { initRedisContext } from './adapters/redis'
+import { initRedisContext, InitRedisContextParams } from './adapters/redis'
 import { invalidateCacheAfterChangeHook, invalidateCacheAfterDeleteHook } from './hooks'
 import { cacheMiddleware } from './middlewares'
 import { PluginOptions, RedisInitOptions } from './types'
 import { extendWebpackConfig } from './webpack'
 
-export const initRedis = (params: RedisInitOptions) => {
-  const {
-    redisUrl: url,
-    redisNamespace: namespace = 'payload',
-    redisIndexesName: indexesName = 'payload-cache-index'
-  } = params
-  initRedisContext({ url, namespace, indexesName })
+export const initRedis = (params: InitRedisContextParams) => {
+  const { url, namespace = 'payload', indexesName = 'payload-cache-index', ...rest } = params
+  initRedisContext({ url, namespace, indexesName, ...rest })
 }
 
 export const cachePlugin =
@@ -31,15 +27,12 @@ export const cachePlugin =
             includedCollections.push(collection.slug)
           }
 
-          const afterChange = [...(hooks?.afterChange || []), invalidateCacheAfterChangeHook]
-          const afterDelete = [...(hooks?.afterDelete || []), invalidateCacheAfterDeleteHook]
-
           return {
             ...collection,
             hooks: {
               ...hooks,
-              afterChange,
-              afterDelete
+              afterChange: [...(hooks?.afterChange || []), invalidateCacheAfterChangeHook],
+              afterDelete: [...(hooks?.afterDelete || []), invalidateCacheAfterDeleteHook]
             }
           }
         })
@@ -53,17 +46,22 @@ export const cachePlugin =
             includedGlobals.push(global.slug)
           }
 
-          const afterChange = [...(hooks?.afterChange || []), invalidateCacheAfterChangeHook]
-
           return {
             ...global,
             hooks: {
               ...hooks,
-              afterChange
+              afterChange: [...(hooks?.afterChange || []), invalidateCacheAfterChangeHook]
             }
           }
         })
       : []
+
+    const middlewareOptions = {
+      includedCollections,
+      includedGlobals,
+      includedPaths,
+      apiBaseUrl: config?.routes?.api || '/api'
+    }
 
     return {
       ...config,
@@ -76,12 +74,7 @@ export const cachePlugin =
       express: {
         preMiddleware: [
           ...(config?.express?.preMiddleware || []),
-          cacheMiddleware({
-            includedCollections,
-            includedGlobals,
-            includedPaths,
-            apiBaseUrl: config?.routes?.api || '/api'
-          })
+          pluginOptions.middleware?.(middlewareOptions) ?? cacheMiddleware(middlewareOptions)
         ]
       }
     }

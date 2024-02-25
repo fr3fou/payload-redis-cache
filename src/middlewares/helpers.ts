@@ -1,6 +1,6 @@
-import { cacheMiddlewareArgs } from '../types'
+import { CacheMiddlewareArgs } from '../types'
 
-interface canUseCacheArgs extends cacheMiddlewareArgs {
+interface canUseCacheArgs extends CacheMiddlewareArgs {
   originalUrl: string
 }
 

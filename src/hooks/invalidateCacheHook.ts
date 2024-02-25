@@ -1,4 +1,3 @@
-import { CollectionAfterDeleteHook } from 'payload/types'
 import { invalidateCache } from '../adapters/cacheHelpers'
 
 /* Explicit type as CollectionAfterChangeHook | GlobalAfterChangeHook
@@ -9,7 +8,7 @@ export const invalidateCacheAfterChangeHook = ({ doc }) => {
   return doc
 }
 
-export const invalidateCacheAfterDeleteHook: CollectionAfterDeleteHook = ({ doc }) => {
+export const invalidateCacheAfterDeleteHook = ({ doc }) => {
   // invalidate cache
   invalidateCache()
   return doc

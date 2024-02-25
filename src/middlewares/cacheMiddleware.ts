@@ -2,11 +2,11 @@ import { NextFunction, Response } from 'express'
 import { PayloadRequest } from 'payload/types'
 import { getCacheItem, setCacheItem } from '../adapters/cacheHelpers'
 import { extractToken, getTokenPayload } from '../adapters/jwtHelpers'
-import { cacheMiddlewareArgs, DEFAULT_USER_COLLECTION } from '../types'
+import { CacheMiddlewareArgs, DEFAULT_USER_COLLECTION } from '../types'
 import { canUseCache } from './helpers'
 
 export const cacheMiddleware =
-  ({ includedCollections, includedGlobals, includedPaths, apiBaseUrl }: cacheMiddlewareArgs) =>
+  ({ includedCollections, includedGlobals, includedPaths, apiBaseUrl }: CacheMiddlewareArgs) =>
   async (req: PayloadRequest, res: Response, next: NextFunction) => {
     // try to match the cache and return immediately
     const {

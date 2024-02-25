@@ -1,3 +1,5 @@
+import { cacheMiddleware } from './middlewares'
+
 export interface RedisInitOptions {
   redisUrl: string
   redisNamespace?: string
@@ -8,6 +10,7 @@ export interface PluginOptions {
   excludedCollections?: string[]
   excludedGlobals?: string[]
   includedPaths?: string[]
+  middleware?: typeof cacheMiddleware
 }
 
 export interface JwtToken {
@@ -18,7 +21,7 @@ export interface JwtToken {
 
 export const DEFAULT_USER_COLLECTION = 'loggedout'
 
-export interface cacheMiddlewareArgs {
+export interface CacheMiddlewareArgs {
   includedCollections: string[]
   includedGlobals: string[]
   includedPaths: string[]

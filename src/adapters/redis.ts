@@ -1,32 +1,37 @@
-import { createClient, RedisClientType } from 'redis'
-import { logger, logger as pinoLogger } from './logger'
+import {
+  createClient,
+  RedisClientOptions,
+  RedisClientType,
+  RedisFunctions,
+  RedisModules,
+  RedisScripts
+} from 'redis'
+import { logger as pinoLogger } from './logger'
 import payload from 'payload'
 
-export interface IRedisContext {
-  getRedisClient: () => RedisClientType
-}
+type RedisClient = RedisClientType<RedisModules, RedisFunctions, RedisScripts>
 
-export interface InitRedisContextParams {
+export interface InitRedisContextParams extends RedisClientOptions {
   url: string
   namespace: string
   indexesName: string
 }
 
-export class RedisContext implements IRedisContext {
-  private redisClient: RedisClientType | null = null
+export class RedisContext {
+  private redisClient: RedisClient | null = null
   private namespace: string | null = null
   private indexesName: string | null = null
   private logger: typeof payload.logger
 
   public init(params: InitRedisContextParams) {
-    const { url, namespace, indexesName } = params
+    const { url, namespace, indexesName, ...options } = params
 
     this.logger =
       payload.logger?.child({ component: 'redis-cache' }) ?? (pinoLogger as typeof payload.logger)
     this.namespace = namespace
     this.indexesName = indexesName
     try {
-      this.redisClient = createClient({ url })
+      this.redisClient = createClient({ url, ...options })
       this.redisClient.connect().then(() => this.logger.info('Connected to Redis successfully!'))
 
       this.redisClient.on('error', (error) => {
@@ -38,16 +43,18 @@ export class RedisContext implements IRedisContext {
     }
   }
 
-  //getter
-  public getRedisClient(): RedisClientType {
+  public getRedisClient(): RedisClient {
     return this.redisClient
   }
+
   public getNamespace(): string {
     return this.namespace
   }
+
   public getIndexesName(): string {
     return this.indexesName
   }
+
   public getLogger(): typeof payload.logger {
     return this.logger
   }

@@ -1,13 +1,15 @@
 import { crypto } from './crypto'
 import { redisContext } from './redis'
+import payload from 'payload'
 
-interface cacheBaseArgs {
+interface CacheBaseArgs {
   userCollection: string
   requestedUrl: string
   authorization: string
+  logger?: typeof payload.logger
 }
 
-interface cacheExtendedArgs extends cacheBaseArgs {
+interface CacheExtendedArgs extends CacheBaseArgs {
   body: unknown
 }
 
@@ -15,7 +17,7 @@ export const generateCacheHash = ({
   userCollection,
   requestedUrl,
   authorization
-}: cacheBaseArgs): string => {
+}: CacheBaseArgs): string => {
   const requestUrlAndUserCollection = `${userCollection}-${requestedUrl}-${authorization}`
   const pathHash = crypto.createHash('sha256').update(requestUrlAndUserCollection).digest('hex')
   const namespace = redisContext.getNamespace()
@@ -25,57 +27,65 @@ export const generateCacheHash = ({
 export const getCacheItem = async ({
   userCollection,
   requestedUrl,
-  authorization
-}: cacheBaseArgs): Promise<string | null> => {
+  authorization,
+  logger
+}: CacheBaseArgs): Promise<string | null> => {
   const redisClient = redisContext.getRedisClient()
-  const logger = redisContext.getLogger()
+  logger ??= redisContext.getLogger()
   if (!redisClient) {
-    logger.info(`Unable to get cache for ${requestedUrl}`)
+    logger.error(
+      { url: requestedUrl, userCollection },
+      `Redis Client not available, can't get cache item`
+    )
     return null
   }
 
   const hash = generateCacheHash({ userCollection, requestedUrl, authorization })
   const jsonData = await redisClient.GET(hash)
   if (!jsonData) {
-    logger.info(`<< Get Cache [MISS] - URL:[${requestedUrl}] User:[${userCollection}]`)
+    logger.info({ url: requestedUrl, userCollection }, `Cache Miss`)
     return null
   }
-  logger.info(`<< Get Cache [OK] - URL:[${requestedUrl}] User:[${userCollection}]`)
+  logger.info({ url: requestedUrl, userCollection }, `Cache Hit`)
   return jsonData
 }
 
-export const setCacheItem = ({
+export const setCacheItem = async ({
   userCollection,
   requestedUrl,
   authorization,
-  body
-}: cacheExtendedArgs): void => {
+  body,
+  logger
+}: CacheExtendedArgs): Promise<void> => {
   const redisClient = redisContext.getRedisClient()
-  const logger = redisContext.getLogger()
+  logger ??= redisContext.getLogger()
   if (!redisClient) {
-    logger.info(`Unable to set cache for ${requestedUrl}`)
+    logger.error(
+      { url: requestedUrl, userCollection },
+      `Redis Client not available, can't set cache item`
+    )
     return
   }
 
   const hash = generateCacheHash({ userCollection, requestedUrl, authorization })
-  logger.info(`>> Set Cache Item - URL:[${requestedUrl}] User:[${userCollection}]`)
 
   try {
     const data = JSON.stringify(body)
-    redisClient.SET(hash, data)
+    await redisClient.SET(hash, data)
 
     const indexesName = redisContext.getIndexesName()
-    redisClient.SADD(indexesName, hash)
+    await redisClient.SADD(indexesName, hash)
   } catch (e) {
-    logger.info(`Unable to set cache for ${requestedUrl}`)
+    logger.error(e, "Couldn't set cache item")
   }
+  logger.info({ url: requestedUrl, userCollection }, `Set cache item`)
 }
 
-export const invalidateCache = async (): Promise<void> => {
+export const invalidateCache = async (logger?: CacheBaseArgs['logger']): Promise<void> => {
   const redisClient = redisContext.getRedisClient()
-  const logger = redisContext.getLogger()
+  logger ??= redisContext.getLogger()
   if (!redisClient) {
-    logger.info('Unable to invalidate cache')
+    logger.error(`Redis Client not available, can't invalidate cache`)
     return
   }
 
