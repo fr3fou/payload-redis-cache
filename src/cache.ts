@@ -72,6 +72,7 @@ export const cachePlugin =
       collections,
       globals,
       express: {
+        ...config.express,
         preMiddleware: [
           ...(config?.express?.preMiddleware || []),
           pluginOptions.middleware?.(middlewareOptions) ?? cacheMiddleware(middlewareOptions)
