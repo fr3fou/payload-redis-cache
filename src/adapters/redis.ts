@@ -39,7 +39,7 @@ export class RedisContext {
       })
     } catch (e) {
       this.redisClient = null
-      this.logger.error('Unable to connect to Redis!', e)
+      this.logger.error(e, 'Unable to connect to Redis!')
     }
   }
 
